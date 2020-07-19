@@ -3,10 +3,12 @@ const { expect } = require("chai");
 describe("TokenContract", function () {
   let Token;
   let token;
+  let addr1 = "0xc783df8a850f42e7F7e57013759C285caa701eB6";
+  let addr2 = "0xeAD9C93b79Ae7C1591b1FB5323BD777E86e150d4";
 
   beforeEach(async function () {
     Token = await ethers.getContractFactory("DecentramallToken");
-    token = await Token.deploy();
+    token = await Token.deploy(addr1);
 
     await token.deployed();
   });
@@ -35,10 +37,8 @@ describe("EstateAgent", function () {
 
     await agent.deployed();
   });
-  it("Should return token address & details", async function () {
-    let token = await agent.tokenAddress();
-    expect(await token.name()).to.equal("Decentramall Space Token");
-    expect(await token.symbol()).to.equal("SPACE");
+  it("Should return correct price of 6", async function () {
+    expect(await agent.price(agent.token.totalSupply() + 1)).to.equal(6);
   });
   // it("Should allow me to change the limit ", async function () {
   //   await token.changeLimit(1500);

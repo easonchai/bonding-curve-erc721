@@ -42,6 +42,7 @@ contract EstateAgent {
 
     constructor(uint256 currentLimit, uint256 basePrice) public{
         token = new DecentramallToken(address(this));
+
         _currentLimit = currentLimit;
         _basePrice = basePrice;
         // Register creator as admin
@@ -94,16 +95,10 @@ contract EstateAgent {
      *
      * Assuming current bonding curve function of y = x^2 + basePrice
      *
-     * The state controls if it is a buy or sell
-     * Buy = true
-     * Sell = false
+     * Input is the x value
      */
-    function price(bool state) public view returns(uint256) {
-        uint256 nextToken = token.totalSupply();
-        if(state){
-            nextToken + 1;
-        }
-        return ((nextToken ** 2) + _basePrice);
+    function price(uint256 x) public view returns(uint256) {
+        return ((x ** 2) + _basePrice);
     }
 
     /**
@@ -114,8 +109,9 @@ contract EstateAgent {
      * The price of the token is based on a bonding curve function
      */
     function buy() public payable {
+        require(token.totalSupply < _currentLimit, "Max supply reached!");
         uint256 supplyBefore = token.totalSupply();
-        uint256 quotedPrice = price(true);
+        uint256 quotedPrice = price(supplyBefore + 1);
         require(msg.value >= (quotedPrice * 1 ether), "Not enough funds to purchase token!");
         uint256 tokenId = token.mint(msg.sender);
         require (token.totalSupply() > supplyBefore, "Token did not mint!");
@@ -133,7 +129,7 @@ contract EstateAgent {
      */
     function sell() public legitimateBuyer{
         uint256 supplyBefore = token.totalSupply();
-        uint256 quotedPrice = price(false);
+        uint256 quotedPrice = price(supplyBefore);
         require(quotedPrice < address(this).balance, "Price can't be higher than balance");
         token.burn(tokenByOwner[msg.sender]);
         require(token.totalSupply() < supplyBefore, "Token did not burn");
