@@ -8,9 +8,13 @@ contract DecentramallToken is ERC721 {
     constructor() ERC721("Decentramall Space Token", "SPACE") public {
     }
 
-    function mint(address purchaser) public returns(bool, uint256){
+    function mint(address purchaser) public returns(uint256){
         uint256 tokenId = uint256(keccak256(abi.encodePacked(purchaser)));
         _safeMint(purchaser, tokenId, "");
-        return (true, tokenId);
+        return (tokenId);
+    }
+
+    function burn(uint256 tokenId) public {
+        _burn(tokenId);
     }
 }
