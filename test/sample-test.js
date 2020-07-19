@@ -3,7 +3,6 @@ const { expect } = require("chai");
 describe("TokenContract", function () {
   let Token;
   let token;
-  let addr1 = "0xc783df8a850f42e7F7e57013759C285caa701eB6";
 
   beforeEach(async function () {
     Token = await ethers.getContractFactory("DecentramallToken");
@@ -16,13 +15,12 @@ describe("TokenContract", function () {
     expect(await token.name()).to.equal("Decentramall Space Token");
     expect(await token.symbol()).to.equal("SPACE");
   });
-  it("Should resolve a created token with ID 123 at index 0", async function () {
-    console.log("TokenID: " + await token.getTokenId())
-    await token.mint(addr1);
-    expect(await token.tokenOfOwnerByIndex(addr1, 0)).to.equal(123);
+  it("Should allow me to change the limit ", async function () {
+    await token.changeLimit(1500);
+    expect(await token.getLimit()).to.equal(1500);
   });
-  it("Should have 1 token in existence", async function () {
-    await token.mint(addr1);
-    expect(await token.totalSupply()).to.equal(1);
-  });
+  // it("Should block others from changing", async function () {
+  //   const [owner, addr1] = await ethers.getSigners();
+  //   await expect(await token.connect(addr1).changeLimit(1500)).to.be.revertedWith("Not an admin!");
+  // });
 });
