@@ -9,6 +9,9 @@ contract EstateAgent {
     //Mapping of buyers & their tokenID
     mapping (address => uint256) public tokenByOwner;
 
+    //Mapping of legitimate buyers
+    mapping (address => bool) public tokenHolder;
+
     //Max limit of tokens to be minted
     uint256 private _currentLimit;
 
@@ -23,7 +26,8 @@ contract EstateAgent {
     }
 
     modifier legitimateBuyer {
-        require(tokenByOwner[msg.sender], "Token is not legitimate!");
+        require(tokenHolder[msg.sender] == true &&
+        tokenByOwner[msg.sender] == uint256(keccak256(abi.encodePacked(msg.sender))), "Not legitimate!");
         _;
     }
 
@@ -113,8 +117,9 @@ contract EstateAgent {
         uint256 supplyBefore = token.totalSupply();
         uint256 quotedPrice = price(true);
         require(msg.value >= (quotedPrice * 1 ether), "Not enough funds to purchase token!");
-        var (tokenId) = token.mint(msg.sender);
+        uint256 tokenId = token.mint(msg.sender);
         require (token.totalSupply() > supplyBefore, "Token did not mint!");
+        tokenHolder[msg.sender] = true;
         tokenByOwner[msg.sender] = tokenId;
         emit BuyToken(msg.sender, quotedPrice);
     }
@@ -131,7 +136,9 @@ contract EstateAgent {
         uint256 quotedPrice = price(false);
         require(quotedPrice < address(this).balance, "Price can't be higher than balance");
         token.burn(tokenByOwner[msg.sender]);
-        require(token.totalSupply < supplyBefore, "Token did not burn");
+        require(token.totalSupply() < supplyBefore, "Token did not burn");
+        tokenHolder[msg.sender] = false;
+        tokenByOwner[msg.sender] = 0;
         msg.sender.transfer(quotedPrice);
         emit SellToken(msg.sender, quotedPrice);
     }

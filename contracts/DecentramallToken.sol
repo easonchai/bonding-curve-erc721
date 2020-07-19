@@ -7,7 +7,7 @@ contract DecentramallToken is ERC721 {
     address private _agent;
 
     modifier onlyAgent {
-        requrie(msg.sender == _agent);
+        require(msg.sender == _agent, "Not an agent!");
         _;
     }
 
@@ -21,7 +21,7 @@ contract DecentramallToken is ERC721 {
         return (tokenId);
     }
 
-    function burn(uint256 tokenId) public onyAgent{
+    function burn(uint256 tokenId) public onlyAgent{
         _burn(tokenId);
     }
 }
