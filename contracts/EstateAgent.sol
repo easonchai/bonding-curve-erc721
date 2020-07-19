@@ -37,7 +37,7 @@ contract EstateAgent {
     event RemoveAdmin(address oldAdmin);
 
     constructor(uint256 currentLimit, uint256 basePrice) public{
-        token = new DecentramallToken();
+        token = new DecentramallToken(address(this));
         _currentLimit = currentLimit;
         _basePrice = basePrice;
         // Register creator as admin
