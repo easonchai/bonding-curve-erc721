@@ -24,4 +24,8 @@ contract DecentramallToken is ERC721 {
     function burn(uint256 tokenId) public onlyAgent{
         _burn(tokenId);
     }
+
+    function verifyLegitimacy(uint256 tokenId) public view returns (bool) {
+        return _tokenOwners.contains(tokenId);
+    }
 }
