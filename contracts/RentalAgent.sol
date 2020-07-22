@@ -3,8 +3,7 @@ pragma solidity ^0.6.8;
 import './EstateAgent.sol';
 import './DecentramallToken.sol';
 
-contract RentalAgent{
-
+contract RentalAgent is Administration{
     struct SpaceDetails {
         address rightfulOwner;
         address rentedTo;
@@ -17,29 +16,29 @@ contract RentalAgent{
     DecentramallToken public token;
     EstateAgent public estateAgent;
 
-    event setToken(address _newContract);
-    event setAgent(address _newContract);
+    event SetToken(address _newContract);
+    event SetAgent(address _newContract);
     event Deposit(address from, uint256 tokenId);
     event Rented(address renter, uint256 tokenId);
     event Withdraw(address to, uint256 tokenId);
 
     /**
      * @dev Set token address
-     * @param _newContract the address of the newly deployed SPACE token
+     * @param spaceToken the address of the newly deployed SPACE token
      * In case if token address ever changes, we can set this contract to point there
      */
-    function setToken(DecentramallToken _newContract) external onlyAdmin {
-        token = _newContract;
-        emit SetToken(_newContract);
+    function setToken(DecentramallToken spaceToken) external onlyAdmin {
+        token = spaceToken;
+        emit SetToken(address(spaceToken));
     }
 
     /**
      * @dev Set EstateAgent address
-     * @param _newContract the address of the EstateAgent
+     * @param estateContract the address of the EstateAgent
      */
-    function setAgent(EstateAgent _newContract) external onlyAdmin {
-        estateAgent = _newContract;
-        emit SetAgent(_newContract);
+    function setAgent(EstateAgent estateContract) external onlyAdmin {
+        estateAgent = estateContract;
+        emit SetAgent(address(estateContract));
     }
 
     /**
@@ -110,7 +109,7 @@ contract RentalAgent{
             return spaceInfo[tokenId].rentedTo;
         } else {
             //Token is not rented, it either exists in this contract, or is held by the owner
-            address currentOwner = token.checkOwner(tokenId);
+            address currentOwner = token.ownerOf(tokenId);
             if(currentOwner == address(this)){
                 //Token is here! Time to check spaceInfo
                 return spaceInfo[tokenId].rightfulOwner;
@@ -118,5 +117,25 @@ contract RentalAgent{
                 return currentOwner;
             }
         }
+    }
+
+    /**
+     * @dev Add a new admin
+     * @param newAdmin the address of the admin to add
+     * Only admin(s) can add new admin
+     */
+    function addAdmin(address newAdmin) public onlyAdmin{
+        adminByAddress[newAdmin] = true;
+        emit AddAdmin(newAdmin);
+    }
+
+    /**
+     * @dev Remove admin
+     * @param oldAdmin the address of the admin to remove
+     * Self explanatory
+     */
+    function removeAdmin(address oldAdmin) public onlyAdmin{
+        adminByAddress[oldAdmin] = false;
+        emit RemoveAdmin(oldAdmin);
     }
 }

@@ -1,11 +1,9 @@
 pragma solidity ^0.6.8;
 
 import './DecentramallToken.sol';
+import './Administration.sol';
 
-contract EstateAgent{
-    //Mapping of admins
-    mapping (address => bool) public adminByAddress;
-
+contract EstateAgent is Administration{
     //Max limit of tokens to be minted
     uint256 private _currentLimit;
 
@@ -14,27 +12,18 @@ contract EstateAgent{
 
     DecentramallToken public token;
 
-    modifier onlyAdmin {
-        require(adminByAddress[msg.sender] == true, "Not an admin!");
-        _;
-    }
-
     event TokenCreated(address token);
     event SetToken(DecentramallToken newContract);
     event SetLimit(uint256 limit);
     event Withdraw(address to, uint256 amount);
     event BuyToken(address buyer, uint256 price);
     event SellToken(address seller, uint256 price);
-    event AddAdmin(address newAdmin);
-    event RemoveAdmin(address oldAdmin);
 
     constructor(uint256 currentLimit, uint256 basePrice) public{
         token = new DecentramallToken(address(this));
 
         _currentLimit = currentLimit;
         _basePrice = basePrice;
-        // Register creator as admin
-        adminByAddress[msg.sender] = true;
         emit TokenCreated(address(token));
     }
 
@@ -110,7 +99,7 @@ contract EstateAgent{
         uint256 quotedPrice = price(supplyBefore);
 
         require(quotedPrice < address(this).balance, "Price can't be higher than balance");
-        token.burn(tokenByOwner[msg.sender]);
+        token.burn(tokenId);
 
         require(token.totalSupply() < supplyBefore, "Token did not burn");
         msg.sender.transfer(quotedPrice);
