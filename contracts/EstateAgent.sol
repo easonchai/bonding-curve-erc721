@@ -104,13 +104,13 @@ contract EstateAgent{
      * The price of the token is based on a bonding curve function
      */
     function sell(uint256 tokenId) public {
-        require(token.verifyLegitimacy(tokenId) == true && token.tokenOfOwnerByIndex(msg.sender, tokenId) == true, "Fake token!");
+        require(token.verifyLegitimacy(tokenId) == true && token.tokenOfOwnerByIndex(msg.sender, 0) == tokenId, "Fake token!");
         uint256 supplyBefore = token.totalSupply();
         uint256 quotedPrice = price(supplyBefore);
 
         require(quotedPrice < address(this).balance, "Price can't be higher than balance");
         token.burn(tokenByOwner[msg.sender]);
-        
+
         require(token.totalSupply() < supplyBefore, "Token did not burn");
         msg.sender.transfer(quotedPrice);
         emit SellToken(msg.sender, quotedPrice);
