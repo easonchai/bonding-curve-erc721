@@ -4,7 +4,6 @@ pragma solidity ^0.6.8;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract DecentramallToken is ERC721 {
-
     address private _agent;
 
     modifier onlyAgent {
@@ -26,8 +25,8 @@ contract DecentramallToken is ERC721 {
         _burn(tokenId);
     }
 
-    function verifyLegitimacy(uint256 tokenId) public view returns (bool) {
-        return _tokenOwners.contains(tokenId);
+    function verifyLegitimacy(address sender, uint256 tokenId) public view returns (bool) {
+        return _exists(tokenId) && ownerOf(tokenId) == sender;
     }
 
     function checkOwner(uint256 tokenId) public view returns (address) {

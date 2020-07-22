@@ -42,7 +42,7 @@ contract EstateAgent{
      * @dev Withdraw funds from this contract
      * @param to address to withdraw to
      * @param amount the amount to withdraw
-     * TODO: Make it multisig so not one admin can withdraw all
+     * @notice TODO: Make it multisig so not one admin can withdraw all
      */
     function withdraw(address payable to, uint256 amount) external onlyAdmin{
         require(address(this).balance > 0 && amount < address(this).balance, "Impossible");
@@ -92,7 +92,7 @@ contract EstateAgent{
         uint256 supplyBefore = token.totalSupply();
         uint256 quotedPrice = price(supplyBefore + 1);
 
-        require(msg.value >= (quotedPrice * 1 ether), "Not enough funds to purchase token!");
+        require(msg.value >= (quotedPrice * 1 finney), "Not enough funds to purchase token!");
         emit BuyToken(msg.sender, quotedPrice);
     }
 
@@ -101,10 +101,11 @@ contract EstateAgent{
      *
      * Sell and burn the token that has been minted
      * @param tokenId the ID of the token being sold
-     * The price of the token is based on a bonding curve function
+     * - The price of the token is based on a bonding curve function
+     * - Will check if token is legitimate
      */
     function sell(uint256 tokenId) public {
-        require(token.verifyLegitimacy(tokenId) == true && token.tokenOfOwnerByIndex(msg.sender, 0) == tokenId, "Fake token!");
+        require(token.verifyLegitimacy(msg.sender, tokenId) == true, "Fake token!");
         uint256 supplyBefore = token.totalSupply();
         uint256 quotedPrice = price(supplyBefore);
 

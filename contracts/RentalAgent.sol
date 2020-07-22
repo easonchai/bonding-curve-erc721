@@ -5,12 +5,14 @@ import './DecentramallToken.sol';
 
 contract RentalAgent{
 
-    //Possibly move this to a registry instead
-    mapping(uint256 => address) rightfulOwner;
-    mapping(address => uint256) rentalEarned;
+    struct SpaceDetails {
+        address rightfulOwner;
+        address rentedTo;
+        uint256 rentalEarned;
+        uint256 expiryBlock;
+    }
 
-    mapping(uint256 => address) tokenRenter;
-    mapping(uint256 => bool) tokenStatus;
+    mapping(uint256 => SpaceDetails) public spaceInfo;
 
     DecentramallToken public token;
     EstateAgent public estateAgent;
@@ -45,12 +47,12 @@ contract RentalAgent{
     * @param tokenId ID of the token to check
     **/
     function deposit(uint256 tokenId) public {
-        require(token.verifyLegitimacy(tokenId) == true && token.tokenOfOwnerByIndex(msg.sender, tokenId) == true, "Fake token!");
+        require(token.verifyLegitimacy(msg.sender, tokenId) == true, "Fake token!");
         token.safeTransferFrom(msg.sender, address(this), tokenId);
 
         //Register the rightful owner if first time user
-        if(rightfulOwner[tokenId] != msg.sender){
-            rightfulOwner[tokenId] = msg.sender;
+        if(spaceInfo[tokenId].rightfulOwner == address(0)){
+            spaceInfo[tokenId] = SpaceDetails(msg.sender, msg.sender, 0, 0);
         }
         emit Deposit(msg.sender, tokenId);
     }
@@ -58,9 +60,14 @@ contract RentalAgent{
     /**
     * @dev Withdraw the SPACE token from this contract
     * @param tokenId ID of the token to check
+    * @notice this will withdraw both the rental earned and the SPACE token
     **/
     function withdrawSpace(uint256 tokenId) public {
-        require(tokenStatus[tokenId] == false && rightfulOwner[tokenId] == msg.sender, "Token is rented/not yours!");
+        require(
+            spaceInfo[tokenId].expiryBlock < block.number &&
+            spaceInfo[tokenId].rightfulOwner == msg.sender, "Token is rented / Not owner!"
+        );
+        claimRent(tokenId);
         token.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
@@ -69,32 +76,27 @@ contract RentalAgent{
     * @param tokenId ID of the token to check
     **/
     function rent(uint256 tokenId) public payable{
+        require(spaceInfo[tokenId].expiryBlock < block.number, "Token is already rented!");
         //To rent, it costs 1/10 to buy new
         uint256 rentPrice = (estateAgent.price(token.totalSupply() + 1 ) / 10);
-        require(msg.value >= (rentPrice * 1 ether), "Not enough funds!");
-        require(tokenStatus[tokenId] == false, "Token is already rented!");
-        tokenRenter[tokenId] = msg.sender;
-        rentalEarned[rightfulOwner[tokenId]] = rentPrice;
+        require(msg.value >= (rentPrice * 1 finney), "Not enough funds!");
+
+        spaceInfo[tokenId].rentedTo = msg.sender;
+        spaceInfo[tokenId].rentalEarned += rentPrice;
+        spaceInfo[tokenId].expiryBlock = block.number + 2252571; //roughly 1 year
     }
 
     /**
     * @dev Claim the rent earned
+    * @param tokenId id of the SPACE token
+    * @notice Owner can claim rent right on Day 1 of renting
     **/
-    function claimRent() public {
-        uint256 toClaim = rentalEarned[msg.sender];
+    function claimRent(uint256 tokenId) public {
+        require(spaceInfo[tokenId].rightfulOwner == msg.sender, "Not owner!");
+        uint256 toClaim = spaceInfo[tokenId].rentalEarned;
         require(address(this).balance >= toClaim, "Not enough funds to pay!");
-        rentalEarned[msg.sender] -= toClaim;
+        spaceInfo[tokenId].rentalEarned -= toClaim;
         msg.sender.transfer(toClaim);
-    }
-
-    /**
-    * @dev Remove rent status
-    * @param tokenId ID of the token to perform action on
-    **/
-    function finishRent(uint256 tokenId) public{
-        require(tokenStatus[tokenId] == true, "Token not rented!");
-        tokenRenter[tokenId] = 0;
-        tokenStatus[tokenId] = false;
     }
 
     /**
@@ -103,15 +105,15 @@ contract RentalAgent{
     **/
     function checkDelegatedOwner(uint256 tokenId) public view returns (address) {
         //Check if the token is being rented
-        if(tokenStatus[tokenId] == true){
-            //Since rented, the current owner is the renter
-            return tokenRenter[tokenId];
+        if(spaceInfo[tokenId].expiryBlock >= block.number){
+            //Since rented, the current owner (have the right to use the SPACE) is the renter
+            return spaceInfo[tokenId].rentedTo;
         } else {
             //Token is not rented, it either exists in this contract, or is held by the owner
             address currentOwner = token.checkOwner(tokenId);
             if(currentOwner == address(this)){
-                //Token is here! Time to check the registry
-                return rightfulOwner[tokenId];
+                //Token is here! Time to check spaceInfo
+                return spaceInfo[tokenId].rightfulOwner;
             } else {
                 return currentOwner;
             }
