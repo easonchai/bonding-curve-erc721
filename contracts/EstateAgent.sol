@@ -1,14 +1,18 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.6.8;
 
 import './DecentramallToken.sol';
 import './Administration.sol';
 
-contract EstateAgent is Administration{
+contract EstateAgent is Administration {
     //Max limit of tokens to be minted
     uint256 private _currentLimit;
 
     //Base price to start
     uint256 private _basePrice;
+
+    //TEMPORARY Multiplier to get price in 10 Finney
+    uint256 private _multiplier = 10000000000000000;
 
     DecentramallToken public token;
 
@@ -16,8 +20,9 @@ contract EstateAgent is Administration{
     event SetToken(DecentramallToken newContract);
     event SetLimit(uint256 limit);
     event Withdraw(address to, uint256 amount);
-    event BuyToken(address buyer, uint256 price);
-    event SellToken(address seller, uint256 price);
+    event BuyToken(address buyer, uint256 price, uint256 tokenId);
+    event SellToken(address seller, uint256 price, uint256 tokenId);
+    event Received(address sender, uint256 value);
 
     constructor(uint256 currentLimit, uint256 basePrice) public{
         token = new DecentramallToken(address(this));
@@ -27,6 +32,10 @@ contract EstateAgent is Administration{
         emit TokenCreated(address(token));
     }
 
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
+
     /**
      * @dev Withdraw funds from this contract
      * @param to address to withdraw to
@@ -34,7 +43,7 @@ contract EstateAgent is Administration{
      * @notice TODO: Make it multisig so not one admin can withdraw all
      */
     function withdraw(address payable to, uint256 amount) external onlyAdmin{
-        require(address(this).balance > 0 && amount < address(this).balance, "Impossible");
+        require(balance() > 0 && amount < balance(), "Impossible");
         to.transfer(amount);
         emit Withdraw(to, amount);
     }
@@ -79,10 +88,13 @@ contract EstateAgent is Administration{
     function buy() public payable {
         require(token.totalSupply() < _currentLimit, "Max supply reached!");
         uint256 supplyBefore = token.totalSupply();
-        uint256 quotedPrice = price(supplyBefore + 1);
+        uint256 quotedPrice = price(supplyBefore + 1) * _multiplier;
 
-        require(msg.value >= (quotedPrice * 1 finney), "Not enough funds to purchase token!");
-        emit BuyToken(msg.sender, quotedPrice);
+        require(msg.value >= (quotedPrice * 1 wei), "Not enough funds to purchase token!");
+        uint256 tokenId = token.mint(msg.sender);
+
+        require (token.totalSupply() > supplyBefore, "Token did not mint!");
+        emit BuyToken(msg.sender, quotedPrice, tokenId);
     }
 
     /**
@@ -96,43 +108,23 @@ contract EstateAgent is Administration{
     function sell(uint256 tokenId) public {
         require(token.verifyLegitimacy(msg.sender, tokenId) == true, "Fake token!");
         uint256 supplyBefore = token.totalSupply();
-        uint256 quotedPrice = price(supplyBefore);
+        uint256 quotedPrice = price(supplyBefore) * _multiplier;
 
-        require(quotedPrice < address(this).balance, "Price can't be higher than balance");
+        require(quotedPrice <= balance(), "Price can't be higher than balance");
         token.burn(tokenId);
-
+        
         require(token.totalSupply() < supplyBefore, "Token did not burn");
-        msg.sender.transfer(quotedPrice);
-        emit SellToken(msg.sender, quotedPrice);
-    }
-
-    /**
-     * @dev Add a new admin
-     * @param newAdmin the address of the admin to add
-     * Only admin(s) can add new admin
-     */
-    function addAdmin(address newAdmin) public onlyAdmin{
-        adminByAddress[newAdmin] = true;
-        emit AddAdmin(newAdmin);
-    }
-
-    /**
-     * @dev Remove admin
-     * @param oldAdmin the address of the admin to remove
-     * Self explanatory
-     */
-    function removeAdmin(address oldAdmin) public onlyAdmin{
-        adminByAddress[oldAdmin] = false;
-        emit RemoveAdmin(oldAdmin);
+        address payable seller = msg.sender;
+        seller.transfer(quotedPrice * 1 wei);
+        emit SellToken(msg.sender, quotedPrice, tokenId);
     }
 
     /**
      * @dev Get currentLimit
      * @return current minting limit
-     * Only admin(s) can add new admin
      */
     function limit() public view returns(uint256){
-        return(_currentLimit);
+        return _currentLimit;
     }
 
     /**
@@ -140,6 +132,7 @@ contract EstateAgent is Administration{
      * @return balance in EstateAgent contract
      */
     function balance() public view returns(uint256){
-        return(address(this).balance);
+        address payable self = address(this);
+        return self.balance;
     }
 }
