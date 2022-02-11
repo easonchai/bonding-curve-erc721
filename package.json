@@ -15,7 +15,7 @@
     "author": "",
     "license": "GPL-3.0-only",
     "dependencies": {
-        "@openzeppelin/contracts": "3.1.0"
+        "@openzeppelin/contracts": "4.4.2"
     },
     "devDependencies": {
         "@openzeppelin/test-helpers": "^0.5.6",
